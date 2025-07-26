@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
-import { Plus, Coins } from "lucide-react"
+import { Plus, Coins, Smartphone } from "lucide-react"
 import { supabase } from "@/lib/supabase"
 import { useAuth } from "@/contexts/auth-context"
 import { useToast } from "@/hooks/use-toast"
@@ -17,6 +17,10 @@ interface Grant {
   description: string
   amount_requested: number
   stake_count: number
+  payment_method: string | null
+  phone_number: string | null
+  account_name: string | null
+  payment_status: string | null
   created_at: string
   users: {
     name: string
@@ -28,7 +32,7 @@ export function GrantsFeed() {
   const [loading, setLoading] = useState(true)
   const [showCreateDialog, setShowCreateDialog] = useState(false)
   const [stakeAmounts, setStakeAmounts] = useState<{ [key: string]: number }>({})
-  const { user, userProfile } = useAuth()
+  const { user, userProfile, refreshProfile } = useAuth()
   const { toast } = useToast()
 
   useEffect(() => {
@@ -87,7 +91,11 @@ export function GrantsFeed() {
         title: "Success",
         description: `Staked ${amount} tokens successfully!`,
       })
-      fetchGrants()
+      // Refresh both grants and user profile to update token balance
+      await Promise.all([
+        fetchGrants(),
+        refreshProfile()
+      ])
       // Reset the stake amount
       setStakeAmounts((prev) => ({ ...prev, [grantId]: 1 }))
     }
@@ -97,6 +105,39 @@ export function GrantsFeed() {
     setStakeAmounts((prev) => ({ ...prev, [grantId]: amount }))
   }
 
+  const getPaymentMethodLabel = (method: string | null) => {
+    const methodMap: Record<string, string> = {
+      chappa: "Chappa",
+      cbe_birr: "CBE Birr",
+      amole: "Amole",
+      m_pesa: "M-Pesa"
+    }
+    return methodMap[method || ""] || "Not specified"
+  }
+
+  const getPaymentStatusColor = (status: string | null) => {
+    switch (status) {
+      case "completed":
+        return "bg-green-100 text-green-800"
+      case "processing":
+        return "bg-yellow-100 text-yellow-800"
+      case "failed":
+        return "bg-red-100 text-red-800"
+      default:
+        return "bg-gray-100 text-gray-800"
+    }
+  }
+
+  const getPaymentStatusLabel = (status: string | null) => {
+    const statusMap: Record<string, string> = {
+      pending: "Pending",
+      processing: "Processing",
+      completed: "Completed",
+      failed: "Failed"
+    }
+    return statusMap[status || ""] || "Pending"
+  }
+
   if (loading) {
     return <div className="text-center py-8">Loading grants...</div>
   }
@@ -104,7 +145,14 @@ export function GrantsFeed() {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold">Micro-Grant Requests</h2>
+        <div>
+          <h2 className="text-2xl font-bold">Micro-Grant Requests</h2>
+          {userProfile && (
+            <p className="text-gray-600 mt-1">
+              Your balance: <span className="font-semibold text-yellow-600">{userProfile.token_balance} tokens</span>
+            </p>
+          )}
+        </div>
         <Button onClick={() => setShowCreateDialog(true)}>
           <Plus className="h-4 w-4 mr-2" />
           Request Grant
@@ -120,9 +168,21 @@ export function GrantsFeed() {
                   <CardTitle className="text-lg">{grant.title}</CardTitle>
                   <CardDescription>by {grant.users.name}</CardDescription>
                 </div>
-                <Badge variant="outline" className="text-green-600">
-                  ${grant.amount_requested.toLocaleString()}
-                </Badge>
+                <div className="flex flex-col items-end space-y-1">
+                  <Badge variant="outline" className="text-green-600">
+                    ${grant.amount_requested.toLocaleString()}
+                  </Badge>
+                  {grant.payment_method && (
+                    <Badge variant="secondary" className="text-xs">
+                      {getPaymentMethodLabel(grant.payment_method)}
+                    </Badge>
+                  )}
+                  {grant.payment_status && (
+                    <Badge className={`text-xs ${getPaymentStatusColor(grant.payment_status)}`}>
+                      {getPaymentStatusLabel(grant.payment_status)}
+                    </Badge>
+                  )}
+                </div>
               </div>
             </CardHeader>
             <CardContent>
@@ -137,6 +197,18 @@ export function GrantsFeed() {
                   </div>
                 </div>
 
+                {grant.payment_method && (
+                  <div className="p-3 bg-blue-50 rounded-lg">
+                    <div className="flex items-center space-x-2 mb-1">
+                      <Smartphone className="h-3 w-3 text-blue-600" />
+                      <span className="text-xs font-medium text-blue-900">Payment Method</span>
+                    </div>
+                    <p className="text-xs text-blue-700">
+                      {getPaymentMethodLabel(grant.payment_method)} • {grant.phone_number}
+                    </p>
+                  </div>
+                )}
+
                 <div className="flex items-center space-x-2">
                   <Input
                     type="number"
@@ -145,6 +217,7 @@ export function GrantsFeed() {
                     value={stakeAmounts[grant.id] || 1}
                     onChange={(e) => updateStakeAmount(grant.id, Number.parseInt(e.target.value) || 1)}
                     className="w-20"
+                    disabled={!userProfile?.token_balance || userProfile.token_balance < 1}
                   />
                   <Button
                     size="sm"
@@ -154,6 +227,12 @@ export function GrantsFeed() {
                     Stake Tokens
                   </Button>
                 </div>
+
+                {userProfile && userProfile.token_balance < (stakeAmounts[grant.id] || 1) && (
+                  <p className="text-xs text-red-500">
+                    Insufficient tokens. You have {userProfile.token_balance} tokens available.
+                  </p>
+                )}
 
                 <span className="text-xs text-gray-500">Posted {new Date(grant.created_at).toLocaleDateString()}</span>
               </div>
