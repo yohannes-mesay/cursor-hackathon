@@ -9,6 +9,7 @@ import { StartupFeed } from "@/components/startup-feed"
 import { BlogFeed } from "@/components/blog-feed"
 import { GrantsFeed } from "@/components/grants-feed"
 import { PitchPolisher } from "@/components/pitch-polisher"
+import { CollaborationHub } from "@/components/collaboration-hub"
 
 export function Dashboard() {
   const { user, userProfile, signOut } = useAuth()
@@ -46,11 +47,12 @@ export function Dashboard() {
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="startups">Startups</TabsTrigger>
             <TabsTrigger value="blog">Blog</TabsTrigger>
             <TabsTrigger value="grants">Grants</TabsTrigger>
             <TabsTrigger value="pitch">Pitch Polisher</TabsTrigger>
+            <TabsTrigger value="collaborate">Collaborate</TabsTrigger>
           </TabsList>
 
           <TabsContent value="startups" className="mt-6">
@@ -67,6 +69,10 @@ export function Dashboard() {
 
           <TabsContent value="pitch" className="mt-6">
             <PitchPolisher />
+          </TabsContent>
+
+          <TabsContent value="collaborate" className="mt-6">
+            <CollaborationHub />
           </TabsContent>
         </Tabs>
       </main>
