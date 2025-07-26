@@ -19,11 +19,13 @@ import {
   TrendingUp,
   Mail,
   MessageCircle,
-  ExternalLink
+  ExternalLink,
+  Gift
 } from "lucide-react"
 import { supabase } from "@/lib/supabase"
 import { useAuth } from "@/contexts/auth-context"
 import { useToast } from "@/hooks/use-toast"
+import { GrantOfferModal } from "@/components/grant-offer-modal"
 
 interface StartupDetailProps {
   startupId: string
@@ -344,6 +346,23 @@ export function StartupDetail({ startupId }: StartupDetailProps) {
                   <Share2 className="h-4 w-4 mr-2" />
                   Share
                 </Button>
+
+                {/* Grant Offer Button - Only show if user is not the founder */}
+                {user && user.id !== startup.user_id && (
+                  <GrantOfferModal
+                    startupId={startup.id}
+                    startupName={startup.name}
+                    founderName={startup.users.name}
+                  >
+                    <Button
+                      variant="outline"
+                      className="hover:bg-green-50 hover:border-green-200 hover:text-green-700"
+                    >
+                      <Gift className="h-4 w-4 mr-2" />
+                      Offer Grant
+                    </Button>
+                  </GrantOfferModal>
+                )}
                 
                 <Button
                   onClick={handleSupport}
@@ -505,6 +524,22 @@ export function StartupDetail({ startupId }: StartupDetailProps) {
           
           {/* Sidebar */}
           <div className="xl:col-span-1 space-y-6">
+            {/* Grant Offer CTA - Mobile */}
+            {user && user.id !== startup.user_id && (
+              <div className="xl:hidden">
+                <GrantOfferModal
+                  startupId={startup.id}
+                  startupName={startup.name}
+                  founderName={startup.users.name}
+                >
+                  <Button className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white">
+                    <Gift className="h-4 w-4 mr-2" />
+                    Offer Grant to {startup.name}
+                  </Button>
+                </GrantOfferModal>
+              </div>
+            )}
+
             {/* Founder Info */}
             <Card className="border-0 shadow-sm bg-white/80 backdrop-blur-sm">
               <CardHeader>
