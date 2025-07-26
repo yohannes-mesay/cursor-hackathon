@@ -8,7 +8,6 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Send, Smile, Paperclip } from "lucide-react"
 import { useSocket } from "@/contexts/socket-context"
-import { useAuth } from "@/contexts/auth-context"
 import { useToast } from "@/hooks/use-toast"
 
 interface Message {
@@ -32,14 +31,15 @@ export function LiveChat({ roomId }: LiveChatProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const typingTimeoutRef = useRef<NodeJS.Timeout>()
   
-  const { socket, isConnected } = useSocket()
-  const { user, userProfile } = useAuth()
+  const { socket, isConnected, currentUser, joinRoom } = useSocket()
   const { toast } = useToast()
 
   useEffect(() => {
-    if (socket && isConnected) {
+    if (socket && isConnected && currentUser) {
+      console.log('LiveChat: Setting up socket listeners for room:', roomId);
+      
       // Join the room
-      socket.emit('join-room', roomId)
+      joinRoom(roomId)
 
       // Listen for new messages
       socket.on('room-message', (data: {
@@ -48,18 +48,31 @@ export function LiveChat({ roomId }: LiveChatProps) {
         userName: string
         message: string
         timestamp: string
+        roomId: string
       }) => {
-        const newMsg: Message = {
-          ...data,
-          timestamp: new Date(data.timestamp),
-          type: 'text'
+        console.log('LiveChat: Received message:', data);
+        if (data.roomId === roomId) {
+          const newMsg: Message = {
+            id: data.id,
+            userId: data.userId,
+            userName: data.userName,
+            message: data.message,
+            timestamp: new Date(data.timestamp),
+            type: 'text'
+          }
+          setMessages(prev => {
+            // Avoid duplicates
+            if (prev.find(msg => msg.id === newMsg.id)) {
+              return prev;
+            }
+            return [...prev, newMsg];
+          });
         }
-        setMessages(prev => [...prev, newMsg])
       })
 
       // Listen for typing indicators
-      socket.on('user-typing', (data: { userId: string, userName: string, isTyping: boolean }) => {
-        if (data.userId !== user?.id) {
+      socket.on('user-typing', (data: { userId: string, userName: string, isTyping: boolean, roomId: string }) => {
+        if (data.roomId === roomId && data.userId !== currentUser.id) {
           setIsTyping(prev => {
             if (data.isTyping) {
               return prev.includes(data.userName) ? prev : [...prev, data.userName]
@@ -71,8 +84,8 @@ export function LiveChat({ roomId }: LiveChatProps) {
       })
 
       // Listen for user join/leave
-      socket.on('user-joined-room', (data: { userId: string, userName: string }) => {
-        if (data.userId !== user?.id) {
+      socket.on('user-joined-room', (data: { userId: string, userName: string, roomId: string }) => {
+        if (data.roomId === roomId && data.userId !== currentUser.id) {
           const systemMsg: Message = {
             id: `system-${Date.now()}`,
             userId: 'system',
@@ -85,26 +98,29 @@ export function LiveChat({ roomId }: LiveChatProps) {
         }
       })
 
-      socket.on('user-left-room', (data: { userId: string, userName: string }) => {
-        const systemMsg: Message = {
-          id: `system-${Date.now()}`,
-          userId: 'system',
-          userName: 'System',
-          message: `${data.userName} left the conversation`,
-          timestamp: new Date(),
-          type: 'system'
+      socket.on('user-left-room', (data: { userId: string, userName: string, roomId: string }) => {
+        if (data.roomId === roomId) {
+          const systemMsg: Message = {
+            id: `system-${Date.now()}`,
+            userId: 'system',
+            userName: 'System',
+            message: `${data.userName} left the conversation`,
+            timestamp: new Date(),
+            type: 'system'
+          }
+          setMessages(prev => [...prev, systemMsg])
         }
-        setMessages(prev => [...prev, systemMsg])
       })
 
       return () => {
+        console.log('LiveChat: Cleaning up socket listeners');
         socket.off('room-message')
         socket.off('user-typing')
         socket.off('user-joined-room')
         socket.off('user-left-room')
       }
     }
-  }, [socket, isConnected, roomId, user?.id])
+  }, [socket, isConnected, roomId, currentUser, joinRoom])
 
   useEffect(() => {
     scrollToBottom()
@@ -115,26 +131,47 @@ export function LiveChat({ roomId }: LiveChatProps) {
   }
 
   const sendMessage = async () => {
-    if (!newMessage.trim() || !socket || !user) return
+    if (!newMessage.trim() || !socket || !currentUser) {
+      console.log('LiveChat: Cannot send message - missing requirements');
+      return;
+    }
 
     setIsLoading(true)
     
     const messageData = {
-      id: `msg-${Date.now()}`,
-      userId: user.id,
-      userName: userProfile?.name || 'Anonymous',
+      id: `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      userId: currentUser.id,
+      userName: currentUser.name,
       message: newMessage.trim(),
       timestamp: new Date().toISOString(),
       roomId
     }
 
+    console.log('LiveChat: Sending message:', messageData);
+
     try {
+      // Add message locally first for immediate feedback
+      const localMsg: Message = {
+        ...messageData,
+        timestamp: new Date(messageData.timestamp),
+        type: 'text' as const
+      }
+      setMessages(prev => [...prev, localMsg]);
+
       socket.emit('room-message', messageData)
       setNewMessage("")
       
       // Stop typing indicator
-      socket.emit('typing', { roomId, isTyping: false })
+      socket.emit('typing', { 
+        roomId, 
+        userId: currentUser.id,
+        userName: currentUser.name,
+        isTyping: false 
+      })
+
+      console.log('LiveChat: Message sent successfully');
     } catch (error) {
+      console.error('LiveChat: Error sending message:', error);
       toast({
         title: "Error",
         description: "Failed to send message",
@@ -146,11 +183,11 @@ export function LiveChat({ roomId }: LiveChatProps) {
   }
 
   const handleTyping = () => {
-    if (socket && user) {
+    if (socket && currentUser) {
       socket.emit('typing', { 
         roomId, 
-        userId: user.id,
-        userName: userProfile?.name || 'Anonymous',
+        userId: currentUser.id,
+        userName: currentUser.name,
         isTyping: true 
       })
 
@@ -163,8 +200,8 @@ export function LiveChat({ roomId }: LiveChatProps) {
       typingTimeoutRef.current = setTimeout(() => {
         socket.emit('typing', { 
           roomId, 
-          userId: user.id,
-          userName: userProfile?.name || 'Anonymous',
+          userId: currentUser.id,
+          userName: currentUser.name,
           isTyping: false 
         })
       }, 1000)
@@ -192,6 +229,9 @@ export function LiveChat({ roomId }: LiveChatProps) {
               <div className="text-center text-gray-500 py-8">
                 <div className="text-4xl mb-2">💬</div>
                 <p>No messages yet. Start the conversation!</p>
+                {currentUser && (
+                  <p className="text-sm mt-2">You are: {currentUser.name}</p>
+                )}
               </div>
             )}
             
@@ -216,9 +256,12 @@ export function LiveChat({ roomId }: LiveChatProps) {
                         <span className="text-xs text-gray-500">
                           {formatTime(message.timestamp)}
                         </span>
+                        {message.userId === currentUser?.id && (
+                          <Badge variant="outline" className="text-xs">You</Badge>
+                        )}
                       </div>
                       <div className={`p-3 rounded-lg max-w-xs ${
-                        message.userId === user?.id 
+                        message.userId === currentUser?.id 
                           ? 'bg-blue-500 text-white ml-auto' 
                           : 'bg-gray-100'
                       }`}>
@@ -287,11 +330,16 @@ export function LiveChat({ roomId }: LiveChatProps) {
             </Button>
           </div>
           
-          {!isConnected && (
-            <p className="text-xs text-red-500 mt-2">
-              Disconnected from chat. Trying to reconnect...
-            </p>
-          )}
+          <div className="flex justify-between items-center mt-2">
+            <div className="text-xs text-gray-500">
+              {currentUser && `Chatting as: ${currentUser.name}`}
+            </div>
+            {!isConnected && (
+              <p className="text-xs text-red-500">
+                Disconnected from chat. Trying to reconnect...
+              </p>
+            )}
+          </div>
         </div>
       </div>
     </div>

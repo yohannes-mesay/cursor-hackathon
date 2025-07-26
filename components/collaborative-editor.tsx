@@ -20,7 +20,6 @@ import {
   Trash2
 } from "lucide-react"
 import { useSocket } from "@/contexts/socket-context"
-import { useAuth } from "@/contexts/auth-context"
 import { useToast } from "@/hooks/use-toast"
 
 interface CollaborativeEditorProps {
@@ -62,8 +61,7 @@ export function CollaborativeEditor({ roomId }: CollaborativeEditorProps) {
   const [changes, setChanges] = useState<DocumentChange[]>([])
   
   const textareaRef = useRef<HTMLTextAreaElement>(null)
-  const { socket, isConnected } = useSocket()
-  const { user, userProfile } = useAuth()
+  const { socket, isConnected, currentUser } = useSocket()
   const { toast } = useToast()
 
   const userColors = [
@@ -72,7 +70,9 @@ export function CollaborativeEditor({ roomId }: CollaborativeEditorProps) {
   ]
 
   useEffect(() => {
-    if (socket && isConnected) {
+    if (socket && isConnected && currentUser) {
+      console.log('CollaborativeEditor: Setting up for room:', roomId);
+      
       // Join document collaboration room
       socket.emit('join-doc-room', roomId)
 
@@ -96,14 +96,17 @@ export function CollaborativeEditor({ roomId }: CollaborativeEditorProps) {
         socket.off('documents-list')
       }
     }
-  }, [socket, isConnected, roomId])
+  }, [socket, isConnected, roomId, currentUser])
 
   const handleDocumentUpdate = (doc: Document) => {
-    setCurrentDoc(doc)
+    setCurrentDoc({
+      ...doc,
+      lastModified: new Date(doc.lastModified)
+    })
   }
 
   const handleDocumentChange = (change: DocumentChange) => {
-    if (!currentDoc || change.userId === user?.id) return
+    if (!currentDoc || change.userId === currentUser?.id) return
 
     // Apply change to current document
     let newContent = currentDoc.content
@@ -129,7 +132,7 @@ export function CollaborativeEditor({ roomId }: CollaborativeEditorProps) {
     }
 
     setCurrentDoc(prev => prev ? { ...prev, content: newContent } : null)
-    setChanges(prev => [...prev, change])
+    setChanges(prev => [...prev, { ...change, timestamp: new Date(change.timestamp) }])
   }
 
   const handleCursorUpdate = (data: { userId: string, cursor: number, selection: { start: number, end: number } }) => {
@@ -143,7 +146,7 @@ export function CollaborativeEditor({ roomId }: CollaborativeEditorProps) {
   }
 
   const handleCollaboratorJoined = (userData: { userId: string, userName: string }) => {
-    if (userData.userId === user?.id) return
+    if (userData.userId === currentUser?.id) return
     
     const color = userColors[collaborators.length % userColors.length]
     setCollaborators(prev => [...prev, {
@@ -159,15 +162,19 @@ export function CollaborativeEditor({ roomId }: CollaborativeEditorProps) {
     setCollaborators(prev => prev.filter(user => user.id !== data.userId))
   }
 
-  const handleDocumentsList = (docs: Document[]) => {
-    setDocuments(docs)
-    if (docs.length > 0 && !currentDoc) {
-      setCurrentDoc(docs[0])
+  const handleDocumentsList = (docs: any[]) => {
+    const parsedDocs = docs.map(doc => ({
+      ...doc,
+      lastModified: new Date(doc.lastModified)
+    }))
+    setDocuments(parsedDocs)
+    if (parsedDocs.length > 0 && !currentDoc) {
+      setCurrentDoc(parsedDocs[0])
     }
   }
 
   const handleContentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    if (!currentDoc || !socket) return
+    if (!currentDoc || !socket || !currentUser) return
 
     const newContent = e.target.value
     const change: DocumentChange = {
@@ -175,7 +182,7 @@ export function CollaborativeEditor({ roomId }: CollaborativeEditorProps) {
       position: 0,
       content: newContent,
       length: currentDoc.content.length,
-      userId: user?.id || '',
+      userId: currentUser.id,
       timestamp: new Date()
     }
 
@@ -191,7 +198,7 @@ export function CollaborativeEditor({ roomId }: CollaborativeEditorProps) {
   }
 
   const handleCursorChange = () => {
-    if (!socket || !textareaRef.current) return
+    if (!socket || !textareaRef.current || !currentUser) return
 
     const cursor = textareaRef.current.selectionStart
     const selection = {
@@ -207,14 +214,14 @@ export function CollaborativeEditor({ roomId }: CollaborativeEditorProps) {
   }
 
   const createNewDocument = async () => {
-    if (!newDocTitle.trim() || !socket) return
+    if (!newDocTitle.trim() || !socket || !currentUser) return
 
     const newDoc: Document = {
       id: `doc-${Date.now()}`,
       title: newDocTitle.trim(),
       content: '',
       lastModified: new Date(),
-      lastModifiedBy: userProfile?.name || 'Anonymous'
+      lastModifiedBy: currentUser.name
     }
 
     socket.emit('create-document', {
@@ -234,15 +241,17 @@ export function CollaborativeEditor({ roomId }: CollaborativeEditorProps) {
   }
 
   const saveDocument = () => {
-    if (!currentDoc || !socket) return
+    if (!currentDoc || !socket || !currentUser) return
+
+    const updatedDoc = {
+      ...currentDoc,
+      lastModified: new Date(),
+      lastModifiedBy: currentUser.name
+    }
 
     socket.emit('save-document', {
       roomId,
-      document: {
-        ...currentDoc,
-        lastModified: new Date(),
-        lastModifiedBy: userProfile?.name || 'Anonymous'
-      }
+      document: updatedDoc
     })
 
     toast({
@@ -336,16 +345,23 @@ export function CollaborativeEditor({ roomId }: CollaborativeEditorProps) {
             <Users className="h-4 w-4 text-gray-500" />
             <span className="text-sm text-gray-500">{collaborators.length + 1}</span>
             <div className="flex space-x-1 ml-2">
-              {collaborators.slice(0, 3).map((collaborator, index) => (
+              {currentUser && (
+                <Avatar className="h-6 w-6">
+                  <AvatarFallback className="text-xs text-white bg-blue-500">
+                    {currentUser.name.charAt(0)}
+                  </AvatarFallback>
+                </Avatar>
+              )}
+              {collaborators.slice(0, 2).map((collaborator, index) => (
                 <Avatar key={collaborator.id} className="h-6 w-6">
                   <AvatarFallback className={`text-xs text-white ${collaborator.color}`}>
                     {collaborator.name.charAt(0)}
                   </AvatarFallback>
                 </Avatar>
               ))}
-              {collaborators.length > 3 && (
+              {collaborators.length > 2 && (
                 <Badge variant="secondary" className="h-6 text-xs">
-                  +{collaborators.length - 3}
+                  +{collaborators.length - 2}
                 </Badge>
               )}
             </div>
@@ -390,6 +406,9 @@ export function CollaborativeEditor({ roomId }: CollaborativeEditorProps) {
               <Badge variant={isConnected ? "default" : "secondary"}>
                 {isConnected ? "🟢 Connected" : "🔴 Offline"}
               </Badge>
+              {currentUser && (
+                <Badge variant="outline">Editing as: {currentUser.name}</Badge>
+              )}
             </div>
           </div>
         </CardHeader>
@@ -407,12 +426,12 @@ export function CollaborativeEditor({ roomId }: CollaborativeEditorProps) {
               />
               
               {/* Cursor indicators for other users */}
-              {collaborators.map((collaborator) => (
+              {collaborators.map((collaborator, index) => (
                 <div
                   key={collaborator.id}
                   className={`absolute top-2 right-2 px-2 py-1 rounded text-xs text-white ${collaborator.color}`}
                   style={{ 
-                    transform: `translateY(${collaborators.indexOf(collaborator) * 25}px)` 
+                    transform: `translateY(${index * 25}px)` 
                   }}
                 >
                   {collaborator.name} is editing
@@ -425,6 +444,9 @@ export function CollaborativeEditor({ roomId }: CollaborativeEditorProps) {
                 <FileText className="h-16 w-16 mx-auto mb-4 opacity-50" />
                 <h3 className="text-lg font-medium mb-2">No Document Selected</h3>
                 <p className="text-sm">Select an existing document or create a new one to start collaborating.</p>
+                {currentUser && (
+                  <p className="text-xs text-gray-400 mt-2">You are: {currentUser.name}</p>
+                )}
               </div>
             </div>
           )}
@@ -445,7 +467,7 @@ export function CollaborativeEditor({ roomId }: CollaborativeEditorProps) {
               {changes.slice(-5).reverse().map((change, index) => (
                 <div key={index} className="text-xs text-gray-600 flex justify-between">
                   <span>
-                    {change.type} at position {change.position}
+                    {change.type} by {collaborators.find(c => c.id === change.userId)?.name || 'Unknown'}
                   </span>
                   <span>{change.timestamp.toLocaleTimeString()}</span>
                 </div>
