@@ -65,12 +65,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { data, error } = await supabase.auth.signUp({ email, password })
 
     if (data.user && !error) {
-      // Create user profile
-      await supabase.from("users").insert({
+      // Create user profile - handle conflicts gracefully
+      const { error: profileError } = await supabase.from("users").insert({
         id: data.user.id,
         name,
         email,
       })
+
+      // If there's a conflict, it might be because the user already exists
+      // This can happen if they signed up before or if using seed data
+      if (profileError) {
+        console.warn("Profile creation error (might be duplicate):", profileError.message)
+        
+        // Try to fetch existing profile instead
+        const { data: existingProfile } = await supabase
+          .from("users")
+          .select("*")
+          .eq("email", email)
+          .single()
+
+        if (existingProfile) {
+          console.log("Found existing profile, continuing with login")
+          // Profile already exists, this is okay
+          return { data, error: null }
+        } else {
+          // Real error, return it
+          return { data, error: profileError }
+        }
+      }
     }
 
     return { data, error }

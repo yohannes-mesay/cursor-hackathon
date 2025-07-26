@@ -16,13 +16,15 @@ export default function Home() {
     )
   }
 
-  if (!user) {
-    return <AuthForm />
-  }
+  // if (!user) {
+  //   // return <AuthForm />
+  //   return <OnboardingWizard />
 
-  if (!userProfile?.startup_name) {
-    return <OnboardingWizard />
-  }
+  // }
+
+  // if (!userProfile?.startup_name) {
+  //   return <OnboardingWizard />
+  // }
 
   return <Dashboard />
 }

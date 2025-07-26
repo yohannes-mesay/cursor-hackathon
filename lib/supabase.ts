@@ -98,6 +98,32 @@ export type Database = {
           created_at?: string
         }
       }
+      comments: {
+        Row: {
+          id: string
+          post_id: string
+          user_id: string
+          parent_comment_id: string | null
+          body: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          post_id: string
+          user_id: string
+          parent_comment_id?: string | null
+          body: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          post_id?: string
+          user_id?: string
+          parent_comment_id?: string | null
+          body?: string
+          created_at?: string
+        }
+      }
       grants: {
         Row: {
           id: string
@@ -124,6 +150,29 @@ export type Database = {
           description?: string
           amount_requested?: number
           stake_count?: number
+          created_at?: string
+        }
+      }
+      stakes: {
+        Row: {
+          id: string
+          grant_id: string
+          user_id: string
+          amount: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          grant_id: string
+          user_id: string
+          amount: number
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          grant_id?: string
+          user_id?: string
+          amount?: number
           created_at?: string
         }
       }
