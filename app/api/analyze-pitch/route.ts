@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { generateObject } from "ai"
-import { openai } from "@ai-sdk/openai"
+import { google } from "@ai-sdk/google"
 import { z } from "zod"
 
 const analysisSchema = z.object({
@@ -17,8 +17,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Pitch content is required" }, { status: 400 })
     }
 
+    // Configure the Gemini model
+    const geminiModel = google("gemini-1.5-flash")
+
     const { object } = await generateObject({
-      model: openai("gpt-4o"),
+      model: geminiModel,
       schema: analysisSchema,
       prompt: `
         Analyze this Ethiopian startup pitch and provide feedback:
@@ -40,12 +43,19 @@ export async function POST(request: NextRequest) {
         - Youth demographic and entrepreneurship culture
 
         Be constructive and specific in your feedback.
+
+        Return your response as a JSON object with the following structure:
+        {
+          "clarity_score": number (0-100),
+          "suggestions": [array of 3-5 improvement suggestions],
+          "local_tips": [array of 3-4 Ethiopian market context tips]
+        }
       `,
     })
 
     return NextResponse.json(object)
   } catch (error) {
     console.error("Error analyzing pitch:", error)
-    return NextResponse.json({ error: "Failed to analyze pitch" }, { status: 500 })
+    return NextResponse.json({ error: "Failed to analyze pitch. Please try again." }, { status: 500 })
   }
 }

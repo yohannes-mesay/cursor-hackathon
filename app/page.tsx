@@ -16,15 +16,16 @@ export default function Home() {
     )
   }
 
-  // if (!user) {
-  //   // return <AuthForm />
-  //   return <OnboardingWizard />
+  // If no user is authenticated, show auth form
+  if (!user) {
+    return <AuthForm />
+  }
 
-  // }
+  // If user exists but no profile or startup info, show onboarding
+  if (!userProfile || !userProfile.startup_name) {
+    return <OnboardingWizard />
+  }
 
-  // if (!userProfile?.startup_name) {
-  //   return <OnboardingWizard />
-  // }
-
+  // User is authenticated and has profile, show dashboard
   return <Dashboard />
 }
