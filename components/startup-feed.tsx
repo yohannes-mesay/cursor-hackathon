@@ -1,13 +1,14 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Heart, Plus, Search, Filter } from "lucide-react"
+import { Heart, Plus, Search, Filter, ExternalLink } from "lucide-react"
 import { supabase } from "@/lib/supabase"
 import { useAuth } from "@/contexts/auth-context"
 import { useToast } from "@/hooks/use-toast"
@@ -33,6 +34,7 @@ export function StartupFeed() {
   const [showCreateDialog, setShowCreateDialog] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
   const [stageFilter, setStageFilter] = useState("all")
+  const router = useRouter()
   const { userProfile } = useAuth()
   const { toast } = useToast()
 
@@ -87,7 +89,8 @@ export function StartupFeed() {
     setFilteredStartups(filtered)
   }
 
-  const handleSupport = async (startupId: string) => {
+  const handleSupport = async (e: React.MouseEvent, startupId: string) => {
+    e.stopPropagation() // Prevent card click when supporting
     setSupportingId(startupId)
     const { error } = await supabase.rpc("increment_support_count", {
       startup_id: startupId,
@@ -107,6 +110,10 @@ export function StartupFeed() {
       fetchStartups() // Refresh the list
     }
     setSupportingId(null)
+  }
+
+  const handleCardClick = (startupId: string) => {
+    router.push(`/startup/${startupId}`)
   }
 
   const getStageColor = (stage: string) => {
@@ -210,25 +217,32 @@ export function StartupFeed() {
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {filteredStartups.map((startup) => (
-          <Card key={startup.id} className="hover:shadow-lg transition-shadow">
+          <Card 
+            key={startup.id} 
+            className="hover:shadow-lg transition-shadow cursor-pointer group"
+            onClick={() => handleCardClick(startup.id)}
+          >
             <CardHeader>
               <div className="flex justify-between items-start">
                 <div>
-                  <CardTitle className="text-lg">{startup.name}</CardTitle>
+                  <CardTitle className="text-lg group-hover:text-blue-600 transition-colors flex items-center">
+                    {startup.name}
+                    <ExternalLink className="h-4 w-4 ml-2 opacity-0 group-hover:opacity-100 transition-opacity" />
+                  </CardTitle>
                   <CardDescription>by {startup.users.name}</CardDescription>
                 </div>
                 <Badge className={getStageColor(startup.stage)}>{startup.stage}</Badge>
               </div>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-gray-600 mb-4">{startup.tagline}</p>
+              <p className="text-sm text-gray-600 mb-4 line-clamp-2">{startup.tagline}</p>
               <div className="flex justify-between items-center">
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => handleSupport(startup.id)}
+                  onClick={(e) => handleSupport(e, startup.id)}
                   disabled={supportingId === startup.id}
-                  className="flex items-center space-x-1"
+                  className="flex items-center space-x-1 hover:bg-red-50 hover:border-red-200"
                 >
                   <Heart className={`h-4 w-4 ${supportingId === startup.id ? 'animate-pulse' : ''}`} />
                   <span>{startup.support_count}</span>
