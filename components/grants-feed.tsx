@@ -1,6 +1,3 @@
-Hizikyas, [7/26/25 2:38 PM]
-grant free code 
-
 "use client"
 
 import { useState, useEffect } from "react"
