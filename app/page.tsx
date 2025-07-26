@@ -4,6 +4,7 @@ import { useAuth } from "@/contexts/auth-context"
 import { AuthForm } from "@/components/auth-form"
 import { Dashboard } from "@/components/dashboard"
 import { OnboardingWizard } from "@/components/onboarding-wizard"
+import { LandingPage } from "@/components/landing-page"
 
 export default function Home() {
   const { user, userProfile, loading } = useAuth()
@@ -16,9 +17,9 @@ export default function Home() {
     )
   }
 
-  // If no user is authenticated, show auth form
+  // If no user is authenticated, show landing page
   if (!user) {
-    return <AuthForm />
+    return <LandingPage />
   }
 
   // If user exists but no profile or startup info, show onboarding
