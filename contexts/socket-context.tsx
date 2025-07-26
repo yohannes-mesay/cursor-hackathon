@@ -9,6 +9,7 @@ interface SocketContextType {
   socket: Socket | null;
   isConnected: boolean;
   onlineUsers: string[];
+  currentUser: { id: string; name: string } | null;
   joinRoom: (roomId: string) => void;
   leaveRoom: (roomId: string) => void;
   sendMessage: (roomId: string, message: any) => void;
@@ -20,14 +21,19 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
   const [socket, setSocket] = useState<Socket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [onlineUsers, setOnlineUsers] = useState<string[]>([]);
-  const { user } = useAuth();
+  const [currentUser, setCurrentUser] = useState<{ id: string; name: string } | null>(null);
+  const { user, userProfile } = useAuth();
 
   useEffect(() => {
     console.log('Socket context: User state changed:', user?.id ? 'User available' : 'No user');
     
-    // Always try to connect, use a fallback ID if no user
+    // Create user info for socket connection
     const userId = user?.id || `anonymous-${Date.now()}`;
-    console.log('Socket context: Attempting to connect with ID:', userId);
+    const userName = userProfile?.name || user?.email || `Guest ${userId.slice(-4)}`;
+    
+    console.log('Socket context: Attempting to connect with:', { userId, userName });
+    
+    setCurrentUser({ id: userId, name: userName });
     
     // Initialize socket connection
     const socketInstance = initializeSocket(userId);
@@ -36,7 +42,7 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
     socketInstance.on('connect', () => {
       console.log('Socket context: Connected successfully');
       setIsConnected(true);
-      socketInstance.emit('user-online', userId);
+      socketInstance.emit('user-online', { userId, userName });
     });
 
     socketInstance.on('disconnect', (reason) => {
@@ -71,26 +77,31 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
       socketInstance.off('user-joined');
       socketInstance.off('user-left');
     };
-  }, [user?.id]);
+  }, [user?.id, userProfile?.name, user?.email]);
 
   const joinRoom = (roomId: string) => {
     console.log('Socket context: Joining room:', roomId);
-    if (socket) {
-      socket.emit('join-room', roomId);
+    if (socket && currentUser) {
+      socket.emit('join-room', { roomId, userId: currentUser.id, userName: currentUser.name });
     }
   };
 
   const leaveRoom = (roomId: string) => {
     console.log('Socket context: Leaving room:', roomId);
-    if (socket) {
-      socket.emit('leave-room', roomId);
+    if (socket && currentUser) {
+      socket.emit('leave-room', { roomId, userId: currentUser.id });
     }
   };
 
   const sendMessage = (roomId: string, message: any) => {
     console.log('Socket context: Sending message to room:', roomId);
-    if (socket) {
-      socket.emit('room-message', { roomId, message });
+    if (socket && currentUser) {
+      socket.emit('room-message', { 
+        ...message, 
+        roomId, 
+        userId: currentUser.id, 
+        userName: currentUser.name 
+      });
     }
   };
 
@@ -100,6 +111,7 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
         socket,
         isConnected,
         onlineUsers,
+        currentUser,
         joinRoom,
         leaveRoom,
         sendMessage,

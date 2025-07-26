@@ -15,6 +15,13 @@ const rooms = new Map()
 const users = new Map()
 const documents = new Map()
 
+// Helper function to broadcast user list
+function broadcastUserList(io) {
+  const onlineUsers = Array.from(users.values()).map(u => u.userId)
+  console.log('Broadcasting user list:', onlineUsers)
+  io.emit('users-online', onlineUsers)
+}
+
 app.prepare().then(() => {
   const httpServer = createServer(async (req, res) => {
     try {
@@ -38,38 +45,39 @@ app.prepare().then(() => {
     console.log('User connected:', socket.id)
 
     // Store user info
-    socket.on('user-online', (userId) => {
-      users.set(socket.id, { userId, socketId: socket.id, userName: `User ${userId.slice(0, 8)}` })
-      console.log('User online:', userId)
+    socket.on('user-online', (userData) => {
+      const { userId, userName } = userData;
+      users.set(socket.id, { userId, socketId: socket.id, userName })
+      console.log('User online:', { userId, userName, totalUsers: users.size })
       
-      // Broadcast updated user list
-      const onlineUsers = Array.from(users.values()).map(u => u.userId)
-      io.emit('users-online', onlineUsers)
+      // Broadcast updated user list to ALL connected clients
+      broadcastUserList(io)
     })
 
     // Room management
-    socket.on('join-room', (roomId) => {
+    socket.on('join-room', (data) => {
+      const { roomId, userId, userName } = data;
       socket.join(roomId)
-      console.log(`Socket ${socket.id} joined room ${roomId}`)
+      console.log(`Socket ${socket.id} (${userName}) joined room ${roomId}`)
       
-      const user = users.get(socket.id)
-      if (user) {
-        socket.to(roomId).emit('user-joined-room', {
-          userId: user.userId,
-          userName: user.userName
-        })
-      }
+      socket.to(roomId).emit('user-joined-room', {
+        userId,
+        userName,
+        roomId
+      })
     })
 
-    socket.on('leave-room', (roomId) => {
+    socket.on('leave-room', (data) => {
+      const { roomId, userId } = data;
       socket.leave(roomId)
       console.log(`Socket ${socket.id} left room ${roomId}`)
       
       const user = users.get(socket.id)
       if (user) {
         socket.to(roomId).emit('user-left-room', {
-          userId: user.userId,
-          userName: user.userName
+          userId,
+          userName: user.userName,
+          roomId
         })
       }
     })
@@ -77,7 +85,7 @@ app.prepare().then(() => {
     // Chat messages
     socket.on('room-message', (data) => {
       console.log('Message received:', data)
-      // Broadcast to all users in the room
+      // Broadcast to all users in the room including sender
       io.to(data.roomId).emit('room-message', data)
     })
 
@@ -193,21 +201,26 @@ app.prepare().then(() => {
       console.log('User disconnected:', socket.id)
       const user = users.get(socket.id)
       if (user) {
+        console.log('Removing user:', user.userName, 'Total before removal:', users.size)
         users.delete(socket.id)
+        console.log('Total users after removal:', users.size)
         
-        // Broadcast updated user list
-        const onlineUsers = Array.from(users.values()).map(u => u.userId)
-        io.emit('users-online', onlineUsers)
+        // Broadcast updated user list to ALL remaining clients
+        broadcastUserList(io)
         
         // Notify rooms about user leaving
         socket.rooms.forEach(roomId => {
           socket.to(roomId).emit('user-left-room', {
             userId: user.userId,
-            userName: user.userName
+            userName: user.userName,
+            roomId
           })
         })
       }
     })
+
+    // Send current user list to newly connected socket
+    socket.emit('users-online', Array.from(users.values()).map(u => u.userId))
   })
 
   httpServer

@@ -22,7 +22,6 @@ import {
   Settings
 } from "lucide-react"
 import { useSocket } from "@/contexts/socket-context"
-import { useAuth } from "@/contexts/auth-context"
 import { useToast } from "@/hooks/use-toast"
 import { LiveChat } from "./live-chat"
 import { VideoCall } from "./video-call"
@@ -38,31 +37,30 @@ interface OnlineUser {
 export function CollaborationHub() {
   const [activeTab, setActiveTab] = useState("chat")
   const [selectedRoom, setSelectedRoom] = useState("general")
-  const [onlineUsers, setOnlineUsers] = useState<OnlineUser[]>([])
   const [isInCall, setIsInCall] = useState(false)
-  const { socket, isConnected } = useSocket()
-  const { user, userProfile } = useAuth()
+  const { socket, isConnected, onlineUsers, currentUser, joinRoom } = useSocket()
   const { toast } = useToast()
 
-  useEffect(() => {
-    if (socket && isConnected) {
-      // Join the general room by default
-      socket.emit('join-room', 'general')
-
-      // Listen for online users updates
-      socket.on('users-online', (users) => {
-        setOnlineUsers(users.map((userId: string) => ({
-          id: userId,
-          name: `User ${userId.slice(0, 8)}`,
-          status: 'online' as const
-        })))
-      })
-
-      return () => {
-        socket.off('users-online')
+  // Convert online user IDs to user objects
+  const onlineUserObjects: OnlineUser[] = onlineUsers.map(userId => {
+    if (userId === currentUser?.id) {
+      return {
+        id: userId,
+        name: currentUser.name,
+        status: 'online' as const
       }
     }
-  }, [socket, isConnected])
+    return {
+      id: userId,
+      name: `User ${userId.slice(-4)}`,
+      status: 'online' as const
+    }
+  })
+
+  useEffect(() => {
+    console.log('CollaborationHub: Online users updated:', onlineUsers);
+    console.log('CollaborationHub: Current user:', currentUser);
+  }, [onlineUsers, currentUser])
 
   const startVideoCall = () => {
     if (!isInCall) {
@@ -102,12 +100,15 @@ export function CollaborationHub() {
         <div>
           <h2 className="text-2xl font-bold">Collaboration Hub</h2>
           <p className="text-gray-600">Connect and collaborate in real-time</p>
+          {currentUser && (
+            <p className="text-sm text-gray-500">You are: {currentUser.name}</p>
+          )}
         </div>
         <div className="flex items-center space-x-4">
           {connectionStatus}
           <Badge variant="secondary">
             <Users className="h-4 w-4 mr-1" />
-            {onlineUsers.length} online
+            {onlineUserObjects.length} online
           </Badge>
         </div>
       </div>
@@ -118,20 +119,25 @@ export function CollaborationHub() {
           <CardHeader>
             <CardTitle className="flex items-center text-lg">
               <Users className="h-5 w-5 mr-2" />
-              Online Users
+              Online Users ({onlineUserObjects.length})
             </CardTitle>
           </CardHeader>
           <CardContent>
             <ScrollArea className="h-[400px]">
               <div className="space-y-3">
-                {onlineUsers.map((user) => (
+                {onlineUserObjects.map((user) => (
                   <div key={user.id} className="flex items-center space-x-3 p-2 rounded-lg hover:bg-gray-50">
                     <Avatar className="h-8 w-8">
                       <AvatarImage src={user.avatar} />
-                      <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
+                      <AvatarFallback>{user.name.charAt(0).toUpperCase()}</AvatarFallback>
                     </Avatar>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{user.name}</p>
+                      <p className="text-sm font-medium truncate">
+                        {user.name}
+                        {user.id === currentUser?.id && (
+                          <span className="text-blue-600 ml-1">(You)</span>
+                        )}
+                      </p>
                       <div className="flex items-center space-x-1">
                         <div className={`w-2 h-2 rounded-full ${
                           user.status === 'online' ? 'bg-green-500' : 
@@ -140,20 +146,25 @@ export function CollaborationHub() {
                         <span className="text-xs text-gray-500 capitalize">{user.status}</span>
                       </div>
                     </div>
-                    <div className="flex space-x-1">
-                      <Button size="sm" variant="ghost" className="h-6 w-6 p-0">
-                        <MessageSquare className="h-3 w-3" />
-                      </Button>
-                      <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={startVideoCall}>
-                        <Video className="h-3 w-3" />
-                      </Button>
-                    </div>
+                    {user.id !== currentUser?.id && (
+                      <div className="flex space-x-1">
+                        <Button size="sm" variant="ghost" className="h-6 w-6 p-0">
+                          <MessageSquare className="h-3 w-3" />
+                        </Button>
+                        <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={startVideoCall}>
+                          <Video className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 ))}
-                {onlineUsers.length === 0 && (
+                {onlineUserObjects.length === 0 && (
                   <div className="text-center text-gray-500 py-8">
                     <Users className="h-8 w-8 mx-auto mb-2 opacity-50" />
                     <p className="text-sm">No users online</p>
+                    {!isConnected && (
+                      <p className="text-xs text-red-500 mt-1">Disconnected</p>
+                    )}
                   </div>
                 )}
               </div>

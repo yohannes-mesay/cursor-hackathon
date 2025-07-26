@@ -16,7 +16,6 @@ import {
   PhoneOff
 } from "lucide-react"
 import { useSocket } from "@/contexts/socket-context"
-import { useAuth } from "@/contexts/auth-context"
 import { useToast } from "@/hooks/use-toast"
 
 interface VideoCallProps {
@@ -43,8 +42,7 @@ export function VideoCall({ isInCall, onEndCall, roomId }: VideoCallProps) {
   const localVideoRef = useRef<HTMLVideoElement>(null)
   const remoteVideosRef = useRef<{ [userId: string]: HTMLVideoElement }>({})
   
-  const { socket, isConnected } = useSocket()
-  const { user, userProfile } = useAuth()
+  const { socket, isConnected, currentUser } = useSocket()
   const { toast } = useToast()
 
   const rtcConfig = {
@@ -55,14 +53,14 @@ export function VideoCall({ isInCall, onEndCall, roomId }: VideoCallProps) {
   }
 
   useEffect(() => {
-    if (isInCall && socket && isConnected) {
+    if (isInCall && socket && isConnected && currentUser) {
       initializeCall()
     } else {
       cleanup()
     }
 
     return () => cleanup()
-  }, [isInCall, socket, isConnected])
+  }, [isInCall, socket, isConnected, currentUser])
 
   useEffect(() => {
     if (socket && isConnected) {
@@ -84,6 +82,8 @@ export function VideoCall({ isInCall, onEndCall, roomId }: VideoCallProps) {
   }, [socket, isConnected])
 
   const initializeCall = async () => {
+    if (!currentUser) return;
+    
     try {
       setCallStatus('connecting')
       
@@ -101,7 +101,11 @@ export function VideoCall({ isInCall, onEndCall, roomId }: VideoCallProps) {
 
       // Join the call room
       if (socket) {
-        socket.emit('join-call', { roomId, userId: user?.id, userName: userProfile?.name })
+        socket.emit('join-call', { 
+          roomId, 
+          userId: currentUser.id, 
+          userName: currentUser.name 
+        })
       }
       
       setCallStatus('connected')
@@ -160,7 +164,7 @@ export function VideoCall({ isInCall, onEndCall, roomId }: VideoCallProps) {
   }
 
   const handleUserJoinedCall = async (data: { userId: string, userName: string }) => {
-    if (data.userId === user?.id) return
+    if (data.userId === currentUser?.id) return
 
     const peerConnection = createPeerConnection(data.userId, data.userName)
     
@@ -301,8 +305,8 @@ export function VideoCall({ isInCall, onEndCall, roomId }: VideoCallProps) {
     cleanup()
     onEndCall()
     
-    if (socket) {
-      socket.emit('leave-call', { roomId, userId: user?.id })
+    if (socket && currentUser) {
+      socket.emit('leave-call', { roomId, userId: currentUser.id })
     }
   }
 
@@ -332,6 +336,9 @@ export function VideoCall({ isInCall, onEndCall, roomId }: VideoCallProps) {
           <Video className="h-16 w-16 mx-auto mb-4 text-gray-400" />
           <h3 className="text-lg font-medium text-gray-900 mb-2">Ready for Video Call</h3>
           <p className="text-gray-600">Click "Start Video" to begin a video call with other users</p>
+          {currentUser && (
+            <p className="text-sm text-gray-500 mt-2">You will join as: {currentUser.name}</p>
+          )}
         </div>
       </div>
     )
@@ -351,6 +358,9 @@ export function VideoCall({ isInCall, onEndCall, roomId }: VideoCallProps) {
             <Users className="h-3 w-3 mr-1" />
             {peers.length + 1} participants
           </Badge>
+          {currentUser && (
+            <Badge variant="secondary">{currentUser.name}</Badge>
+          )}
         </div>
       </div>
 
@@ -367,7 +377,7 @@ export function VideoCall({ isInCall, onEndCall, roomId }: VideoCallProps) {
               className="w-full h-full object-cover bg-gray-900"
             />
             <div className="absolute bottom-2 left-2">
-              <Badge variant="secondary">You</Badge>
+              <Badge variant="secondary">You ({currentUser?.name})</Badge>
             </div>
             {!isVideoEnabled && (
               <div className="absolute inset-0 bg-gray-900 flex items-center justify-center">
