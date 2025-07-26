@@ -1,10 +1,20 @@
--- Function to increment startup support count
+-- Function to increment support count for startups
 CREATE OR REPLACE FUNCTION increment_support_count(startup_id UUID)
 RETURNS void AS $$
 BEGIN
-    UPDATE startups 
-    SET support_count = support_count + 1 
-    WHERE id = startup_id;
+  UPDATE startups 
+  SET support_count = support_count + 1 
+  WHERE id = startup_id;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Function to increment stake count for grants
+CREATE OR REPLACE FUNCTION increment_stake_count(grant_id UUID)
+RETURNS void AS $$
+BEGIN
+  UPDATE grants 
+  SET stake_count = stake_count + 1 
+  WHERE id = grant_id;
 END;
 $$ LANGUAGE plpgsql;
 

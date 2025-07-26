@@ -189,15 +189,15 @@ export function StartupDetail({ startupId }: StartupDetailProps) {
   const getStageColor = (stage: string) => {
     switch (stage) {
       case "idea":
-        return "bg-yellow-100 text-yellow-800 border-yellow-300"
+        return "bg-amber-50 text-amber-700 border-amber-200"
       case "mvp":
-        return "bg-blue-100 text-blue-800 border-blue-300"
+        return "bg-blue-50 text-blue-700 border-blue-200"
       case "growth":
-        return "bg-green-100 text-green-800 border-green-300"
+        return "bg-emerald-50 text-emerald-700 border-emerald-200"
       case "scaling":
-        return "bg-purple-100 text-purple-800 border-purple-300"
+        return "bg-purple-50 text-purple-700 border-purple-200"
       default:
-        return "bg-gray-100 text-gray-800 border-gray-300"
+        return "bg-gray-50 text-gray-700 border-gray-200"
     }
   }
 
@@ -218,16 +218,16 @@ export function StartupDetail({ startupId }: StartupDetailProps) {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 p-6">
-        <div className="max-w-4xl mx-auto">
-          <div className="animate-pulse">
-            <div className="h-8 bg-gray-300 rounded w-32 mb-6"></div>
-            <div className="bg-white rounded-lg p-6 mb-6">
-              <div className="h-8 bg-gray-300 rounded w-64 mb-4"></div>
-              <div className="h-4 bg-gray-300 rounded w-96 mb-6"></div>
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+        <div className="container mx-auto px-4 py-6 max-w-7xl">
+          <div className="animate-pulse space-y-6">
+            <div className="h-10 bg-gray-200 rounded-lg w-32"></div>
+            <div className="bg-white rounded-xl shadow-sm p-6 space-y-4">
+              <div className="h-10 bg-gray-200 rounded-lg w-3/4"></div>
+              <div className="h-6 bg-gray-200 rounded-lg w-1/2"></div>
               <div className="flex gap-4">
-                <div className="h-10 bg-gray-300 rounded w-24"></div>
-                <div className="h-10 bg-gray-300 rounded w-24"></div>
+                <div className="h-12 bg-gray-200 rounded-lg w-28"></div>
+                <div className="h-12 bg-gray-200 rounded-lg w-28"></div>
               </div>
             </div>
           </div>
@@ -238,11 +238,14 @@ export function StartupDetail({ startupId }: StartupDetailProps) {
 
   if (!startup) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold mb-2">Startup Not Found</h2>
-          <p className="text-gray-600 mb-4">The startup you're looking for doesn't exist.</p>
-          <Button onClick={() => router.back()}>
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
+        <div className="text-center bg-white rounded-xl shadow-lg p-8 mx-4 max-w-md">
+          <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Target className="h-8 w-8 text-gray-400" />
+          </div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Startup Not Found</h2>
+          <p className="text-gray-600 mb-6">The startup you're looking for doesn't exist.</p>
+          <Button onClick={() => router.back()} className="w-full">
             <ArrowLeft className="h-4 w-4 mr-2" />
             Go Back
           </Button>
@@ -252,189 +255,248 @@ export function StartupDetail({ startupId }: StartupDetailProps) {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
       {/* Header */}
-      <div className="bg-white border-b">
-        <div className="max-w-4xl mx-auto px-6 py-4">
+      <div className="bg-white border-b border-gray-200 sticky top-0 z-10 backdrop-blur-sm bg-white/95">
+        <div className="container mx-auto px-4 py-4 max-w-7xl">
           <Button 
             variant="ghost" 
             onClick={() => router.back()}
-            className="mb-4"
+            className="mb-4 hover:bg-gray-100"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Startups
           </Button>
           
-          <div className="flex items-start justify-between">
-            <div className="flex items-start space-x-4">
-              <Avatar className="h-16 w-16">
-                <AvatarFallback className="text-lg font-bold bg-blue-500 text-white">
+          {/* Mobile Header */}
+          <div className="block lg:hidden">
+            <div className="flex items-center space-x-4 mb-4">
+              <Avatar className="h-16 w-16 ring-4 ring-blue-50">
+                <AvatarFallback className="text-xl font-bold bg-gradient-to-br from-blue-500 to-purple-600 text-white">
                   {startup.name.charAt(0)}
                 </AvatarFallback>
               </Avatar>
-              
-              <div>
-                <h1 className="text-3xl font-bold text-gray-900 mb-2">{startup.name}</h1>
-                <p className="text-lg text-gray-600 mb-3">{startup.tagline}</p>
-                
-                <div className="flex items-center space-x-4 mb-4">
-                  <Badge className={`border ${getStageColor(startup.stage)} px-3 py-1`}>
-                    {getStageIcon(startup.stage)}
-                    <span className="ml-2 capitalize">{startup.stage}</span>
-                  </Badge>
-                  
-                  <div className="flex items-center text-gray-600">
-                    <Calendar className="h-4 w-4 mr-1" />
-                    <span className="text-sm">
-                      Founded {new Date(startup.created_at).toLocaleDateString()}
-                    </span>
-                  </div>
-                </div>
+              <div className="flex-1 min-w-0">
+                <h1 className="text-2xl font-bold text-gray-900 truncate">{startup.name}</h1>
+                <p className="text-gray-600 text-sm line-clamp-2">{startup.tagline}</p>
               </div>
             </div>
             
-            <div className="flex space-x-2">
-              <Button
-                variant="outline"
-                onClick={handleShare}
-              >
-                <Share2 className="h-4 w-4 mr-2" />
-                Share
-              </Button>
+            <div className="flex items-center justify-between mb-4">
+              <Badge className={`border ${getStageColor(startup.stage)} px-3 py-1`}>
+                {getStageIcon(startup.stage)}
+                <span className="ml-2 capitalize font-medium">{startup.stage}</span>
+              </Badge>
               
-              <Button
-                onClick={handleSupport}
-                disabled={supportingId === startup.id}
-                className="bg-blue-600 hover:bg-blue-700"
-              >
-                <Heart className={`h-4 w-4 mr-2 ${supportingId === startup.id ? 'animate-pulse' : ''}`} />
-                Support ({startup.support_count})
-              </Button>
+              <div className="flex space-x-2">
+                <Button variant="outline" size="sm" onClick={handleShare}>
+                  <Share2 className="h-4 w-4" />
+                </Button>
+                <Button
+                  onClick={handleSupport}
+                  disabled={supportingId === startup.id}
+                  size="sm"
+                  className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+                >
+                  <Heart className={`h-4 w-4 mr-2 ${supportingId === startup.id ? 'animate-pulse' : ''}`} />
+                  {startup.support_count}
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          {/* Desktop Header */}
+          <div className="hidden lg:block">
+            <div className="flex items-start justify-between">
+              <div className="flex items-start space-x-6">
+                <Avatar className="h-20 w-20 ring-4 ring-blue-50">
+                  <AvatarFallback className="text-2xl font-bold bg-gradient-to-br from-blue-500 to-purple-600 text-white">
+                    {startup.name.charAt(0)}
+                  </AvatarFallback>
+                </Avatar>
+                
+                <div>
+                  <h1 className="text-4xl font-bold text-gray-900 mb-3">{startup.name}</h1>
+                  <p className="text-xl text-gray-600 mb-4 max-w-2xl">{startup.tagline}</p>
+                  
+                  <div className="flex items-center space-x-6 mb-4">
+                    <Badge className={`border ${getStageColor(startup.stage)} px-4 py-2 text-sm`}>
+                      {getStageIcon(startup.stage)}
+                      <span className="ml-2 capitalize font-medium">{startup.stage}</span>
+                    </Badge>
+                    
+                    <div className="flex items-center text-gray-600">
+                      <Calendar className="h-4 w-4 mr-2" />
+                      <span className="text-sm">
+                        Founded {new Date(startup.created_at).toLocaleDateString()}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="flex space-x-3">
+                <Button
+                  variant="outline"
+                  onClick={handleShare}
+                  className="hover:bg-gray-50"
+                >
+                  <Share2 className="h-4 w-4 mr-2" />
+                  Share
+                </Button>
+                
+                <Button
+                  onClick={handleSupport}
+                  disabled={supportingId === startup.id}
+                  className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"
+                >
+                  <Heart className={`h-4 w-4 mr-2 ${supportingId === startup.id ? 'animate-pulse' : ''}`} />
+                  Support ({startup.support_count})
+                </Button>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
       {/* Content */}
-      <div className="max-w-4xl mx-auto px-6 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="container mx-auto px-4 py-8 max-w-7xl">
+        <div className="grid grid-cols-1 xl:grid-cols-4 gap-8">
           {/* Main Content */}
-          <div className="lg:col-span-2">
+          <div className="xl:col-span-3">
             <Tabs defaultValue="about" className="w-full">
-              <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="about">About</TabsTrigger>
-                <TabsTrigger value="posts">Posts ({posts.length})</TabsTrigger>
-                <TabsTrigger value="grants">Grants ({grants.length})</TabsTrigger>
+              <TabsList className="grid w-full grid-cols-3 mb-8 bg-gray-100 p-1 rounded-xl">
+                <TabsTrigger value="about" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">About</TabsTrigger>
+                <TabsTrigger value="posts" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">Posts ({posts.length})</TabsTrigger>
+                <TabsTrigger value="grants" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">Grants ({grants.length})</TabsTrigger>
               </TabsList>
               
-              <TabsContent value="about" className="mt-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>About {startup.name}</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-6">
-                    <div>
-                      <h3 className="font-semibold mb-2">Mission</h3>
-                      <p className="text-gray-700">{startup.tagline}</p>
-                    </div>
-                    
-                    <Separator />
-                    
-                    <div>
-                      <h3 className="font-semibold mb-2">Current Stage</h3>
-                      <div className="flex items-center space-x-2">
-                        {getStageIcon(startup.stage)}
-                        <span className="capitalize">{startup.stage} stage</span>
+              <TabsContent value="about" className="mt-0">
+                <div className="space-y-6">
+                  <Card className="border-0 shadow-sm bg-white/80 backdrop-blur-sm">
+                    <CardHeader>
+                      <CardTitle className="text-xl text-gray-900">About {startup.name}</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-6">
+                      <div>
+                        <h3 className="font-semibold mb-3 text-gray-900">Mission</h3>
+                        <p className="text-gray-700 leading-relaxed">{startup.tagline}</p>
                       </div>
-                      <p className="text-sm text-gray-600 mt-1">
-                        {startup.stage === 'idea' && 'Early concept development and validation'}
-                        {startup.stage === 'mvp' && 'Building and testing minimum viable product'}
-                        {startup.stage === 'growth' && 'Scaling user base and revenue'}
-                        {startup.stage === 'scaling' && 'Expanding market reach and operations'}
-                      </p>
-                    </div>
-                    
-                    <Separator />
-                    
-                    <div>
-                      <h3 className="font-semibold mb-2">Community Support</h3>
-                      <div className="flex items-center space-x-4">
-                        <div className="flex items-center space-x-1">
-                          <Heart className="h-4 w-4 text-red-500" />
-                          <span>{startup.support_count} supporters</span>
+                      
+                      <Separator />
+                      
+                      <div>
+                        <h3 className="font-semibold mb-3 text-gray-900">Current Stage</h3>
+                        <div className="flex items-center space-x-3 mb-3">
+                          <div className={`p-2 rounded-lg ${getStageColor(startup.stage)}`}>
+                            {getStageIcon(startup.stage)}
+                          </div>
+                          <span className="capitalize font-medium text-gray-900">{startup.stage} stage</span>
+                        </div>
+                        <p className="text-sm text-gray-600 leading-relaxed">
+                          {startup.stage === 'idea' && 'Early concept development and validation phase'}
+                          {startup.stage === 'mvp' && 'Building and testing minimum viable product'}
+                          {startup.stage === 'growth' && 'Scaling user base and revenue streams'}
+                          {startup.stage === 'scaling' && 'Expanding market reach and operations'}
+                        </p>
+                      </div>
+                      
+                      <Separator />
+                      
+                      <div>
+                        <h3 className="font-semibold mb-3 text-gray-900">Community Support</h3>
+                        <div className="flex items-center space-x-4">
+                          <div className="flex items-center space-x-2 bg-red-50 px-4 py-2 rounded-lg">
+                            <Heart className="h-5 w-5 text-red-500" />
+                            <span className="font-medium text-gray-900">{startup.support_count} supporters</span>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  </CardContent>
-                </Card>
+                    </CardContent>
+                  </Card>
+                </div>
               </TabsContent>
               
-              <TabsContent value="posts" className="mt-6">
+              <TabsContent value="posts" className="mt-0">
                 <div className="space-y-4">
                   {posts.length === 0 ? (
-                    <Card>
-                      <CardContent className="py-8 text-center text-gray-500">
-                        <MessageCircle className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                        <p>No posts yet</p>
+                    <Card className="border-0 shadow-sm bg-white/80 backdrop-blur-sm">
+                      <CardContent className="py-12 text-center">
+                        <MessageCircle className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                        <p className="text-gray-500 text-lg">No posts yet</p>
+                        <p className="text-gray-400 text-sm mt-2">Check back later for updates from the team</p>
                       </CardContent>
                     </Card>
                   ) : (
-                    posts.map((post) => (
-                      <Card key={post.id}>
-                        <CardHeader>
-                          <CardTitle className="text-lg">{post.title}</CardTitle>
-                          <CardDescription>
-                            {new Date(post.created_at).toLocaleDateString()}
-                          </CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                          <p className="text-gray-700 mb-3 line-clamp-3">{post.body}</p>
-                          <div className="flex flex-wrap gap-2">
-                            {post.tags?.map((tag) => (
-                              <Badge key={tag} variant="secondary" className="text-xs">
-                                {tag}
-                              </Badge>
-                            ))}
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))
+                    <div className="grid gap-4">
+                      {posts.map((post) => (
+                        <Card key={post.id} className="border-0 shadow-sm bg-white/80 backdrop-blur-sm hover:shadow-md transition-shadow">
+                          <CardHeader>
+                            <CardTitle className="text-lg text-gray-900">{post.title}</CardTitle>
+                            <CardDescription className="text-gray-600">
+                              {new Date(post.created_at).toLocaleDateString('en-US', {
+                                year: 'numeric',
+                                month: 'long',
+                                day: 'numeric'
+                              })}
+                            </CardDescription>
+                          </CardHeader>
+                          <CardContent>
+                            <p className="text-gray-700 mb-4 line-clamp-3 leading-relaxed">{post.body}</p>
+                            <div className="flex flex-wrap gap-2">
+                              {post.tags?.map((tag) => (
+                                <Badge key={tag} variant="secondary" className="text-xs bg-gray-100 text-gray-700 hover:bg-gray-200">
+                                  {tag}
+                                </Badge>
+                              ))}
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
                   )}
                 </div>
               </TabsContent>
               
-              <TabsContent value="grants" className="mt-6">
+              <TabsContent value="grants" className="mt-0">
                 <div className="space-y-4">
                   {grants.length === 0 ? (
-                    <Card>
-                      <CardContent className="py-8 text-center text-gray-500">
-                        <Target className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                        <p>No grant requests yet</p>
+                    <Card className="border-0 shadow-sm bg-white/80 backdrop-blur-sm">
+                      <CardContent className="py-12 text-center">
+                        <Target className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                        <p className="text-gray-500 text-lg">No grant requests yet</p>
+                        <p className="text-gray-400 text-sm mt-2">Funding requests will appear here</p>
                       </CardContent>
                     </Card>
                   ) : (
-                    grants.map((grant) => (
-                      <Card key={grant.id}>
-                        <CardHeader>
-                          <div className="flex justify-between items-start">
-                            <CardTitle className="text-lg">{grant.title}</CardTitle>
-                            <Badge variant="outline" className="text-green-600">
-                              ${grant.amount_requested.toLocaleString()}
-                            </Badge>
-                          </div>
-                          <CardDescription>
-                            {new Date(grant.created_at).toLocaleDateString()}
-                          </CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                          <p className="text-gray-700 mb-3">{grant.description}</p>
-                          <div className="flex items-center text-sm text-gray-600">
-                            <Users className="h-4 w-4 mr-1" />
-                            <span>{grant.stake_count} backers</span>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))
+                    <div className="grid gap-4">
+                      {grants.map((grant) => (
+                        <Card key={grant.id} className="border-0 shadow-sm bg-white/80 backdrop-blur-sm hover:shadow-md transition-shadow">
+                          <CardHeader>
+                            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                              <CardTitle className="text-lg text-gray-900">{grant.title}</CardTitle>
+                              <Badge variant="outline" className="text-green-600 border-green-200 bg-green-50 w-fit">
+                                ${grant.amount_requested.toLocaleString()}
+                              </Badge>
+                            </div>
+                            <CardDescription className="text-gray-600">
+                              {new Date(grant.created_at).toLocaleDateString('en-US', {
+                                year: 'numeric',
+                                month: 'long',
+                                day: 'numeric'
+                              })}
+                            </CardDescription>
+                          </CardHeader>
+                          <CardContent>
+                            <p className="text-gray-700 mb-4 leading-relaxed">{grant.description}</p>
+                            <div className="flex items-center text-sm text-gray-600">
+                              <Users className="h-4 w-4 mr-2" />
+                              <span>{grant.stake_count} backers</span>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
                   )}
                 </div>
               </TabsContent>
@@ -442,34 +504,32 @@ export function StartupDetail({ startupId }: StartupDetailProps) {
           </div>
           
           {/* Sidebar */}
-          <div className="space-y-6">
+          <div className="xl:col-span-1 space-y-6">
             {/* Founder Info */}
-            <Card>
+            <Card className="border-0 shadow-sm bg-white/80 backdrop-blur-sm">
               <CardHeader>
-                <CardTitle className="text-lg">Founder</CardTitle>
+                <CardTitle className="text-lg text-gray-900">Founder</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="flex items-start space-x-3">
-                  <Avatar className="h-12 w-12">
-                    <AvatarFallback className="bg-gray-500 text-white">
+                <div className="flex flex-col items-center text-center">
+                  <Avatar className="h-16 w-16 mb-4 ring-4 ring-gray-50">
+                    <AvatarFallback className="bg-gradient-to-br from-gray-500 to-gray-600 text-white text-lg">
                       {startup.users.name.charAt(0)}
                     </AvatarFallback>
                   </Avatar>
                   
-                  <div className="flex-1">
-                    <h3 className="font-semibold">{startup.users.name}</h3>
-                    <p className="text-sm text-gray-600 mb-2">Founder & CEO</p>
-                    
-                    <div className="space-y-2">
-                      <Button variant="outline" size="sm" className="w-full">
-                        <Mail className="h-4 w-4 mr-2" />
-                        Contact
-                      </Button>
-                      <Button variant="outline" size="sm" className="w-full">
-                        <MessageCircle className="h-4 w-4 mr-2" />
-                        Message
-                      </Button>
-                    </div>
+                  <h3 className="font-semibold text-gray-900 mb-1">{startup.users.name}</h3>
+                  <p className="text-sm text-gray-600 mb-4">Founder & CEO</p>
+                  
+                  <div className="w-full space-y-2">
+                    <Button variant="outline" size="sm" className="w-full hover:bg-gray-50">
+                      <Mail className="h-4 w-4 mr-2" />
+                      Contact
+                    </Button>
+                    <Button variant="outline" size="sm" className="w-full hover:bg-gray-50">
+                      <MessageCircle className="h-4 w-4 mr-2" />
+                      Message
+                    </Button>
                   </div>
                 </div>
               </CardContent>
@@ -477,14 +537,14 @@ export function StartupDetail({ startupId }: StartupDetailProps) {
             
             {/* Help Needed */}
             {startup.users.areas_of_help && startup.users.areas_of_help.length > 0 && (
-              <Card>
+              <Card className="border-0 shadow-sm bg-white/80 backdrop-blur-sm">
                 <CardHeader>
-                  <CardTitle className="text-lg">Help Needed</CardTitle>
+                  <CardTitle className="text-lg text-gray-900">Help Needed</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-2">
+                  <div className="flex flex-wrap gap-2">
                     {startup.users.areas_of_help.map((area) => (
-                      <Badge key={area} variant="outline" className="mr-2 mb-2">
+                      <Badge key={area} variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100">
                         {area}
                       </Badge>
                     ))}
@@ -494,26 +554,28 @@ export function StartupDetail({ startupId }: StartupDetailProps) {
             )}
             
             {/* Quick Stats */}
-            <Card>
+            <Card className="border-0 shadow-sm bg-white/80 backdrop-blur-sm">
               <CardHeader>
-                <CardTitle className="text-lg">Quick Stats</CardTitle>
+                <CardTitle className="text-lg text-gray-900">Quick Stats</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex justify-between">
+              <CardContent className="space-y-4">
+                <div className="flex justify-between items-center">
                   <span className="text-gray-600">Stage</span>
-                  <span className="capitalize font-medium">{startup.stage}</span>
+                  <Badge className={`${getStageColor(startup.stage)} border`}>
+                    <span className="capitalize font-medium">{startup.stage}</span>
+                  </Badge>
                 </div>
-                <div className="flex justify-between">
+                <div className="flex justify-between items-center">
                   <span className="text-gray-600">Supporters</span>
-                  <span className="font-medium">{startup.support_count}</span>
+                  <span className="font-semibold text-gray-900">{startup.support_count}</span>
                 </div>
-                <div className="flex justify-between">
+                <div className="flex justify-between items-center">
                   <span className="text-gray-600">Posts</span>
-                  <span className="font-medium">{posts.length}</span>
+                  <span className="font-semibold text-gray-900">{posts.length}</span>
                 </div>
-                <div className="flex justify-between">
+                <div className="flex justify-between items-center">
                   <span className="text-gray-600">Grant Requests</span>
-                  <span className="font-medium">{grants.length}</span>
+                  <span className="font-semibold text-gray-900">{grants.length}</span>
                 </div>
               </CardContent>
             </Card>

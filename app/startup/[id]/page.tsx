@@ -1,11 +1,12 @@
 import { StartupDetail } from '@/components/startup-detail'
 
 interface StartupPageProps {
-  params: {
+  params: Promise<{
     id: string
-  }
+  }>
 }
 
-export default function StartupPage({ params }: StartupPageProps) {
-  return <StartupDetail startupId={params.id} />
+export default async function StartupPage({ params }: StartupPageProps) {
+  const { id } = await params
+  return <StartupDetail startupId={id} />
 } 
