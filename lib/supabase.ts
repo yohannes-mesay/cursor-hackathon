@@ -132,6 +132,10 @@ export type Database = {
           description: string
           amount_requested: number
           stake_count: number
+          payment_method: string | null
+          phone_number: string | null
+          account_name: string | null
+          payment_status: string | null
           created_at: string
         }
         Insert: {
@@ -141,6 +145,10 @@ export type Database = {
           description: string
           amount_requested: number
           stake_count?: number
+          payment_method?: string | null
+          phone_number?: string | null
+          account_name?: string | null
+          payment_status?: string | null
           created_at?: string
         }
         Update: {
@@ -150,6 +158,10 @@ export type Database = {
           description?: string
           amount_requested?: number
           stake_count?: number
+          payment_method?: string | null
+          phone_number?: string | null
+          account_name?: string | null
+          payment_status?: string | null
           created_at?: string
         }
       }

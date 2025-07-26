@@ -26,9 +26,9 @@ export function Dashboard() {
             </div>
 
             <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-2 text-sm text-gray-600">
-                <Coins className="h-4 w-4" />
-                <span>{userProfile?.token_balance || 0} tokens</span>
+              <div className="flex items-center space-x-2 text-sm bg-yellow-50 px-3 py-1 rounded-full border border-yellow-200">
+                <Coins className="h-4 w-4 text-yellow-600" />
+                <span className="font-semibold text-yellow-700">{userProfile?.token_balance || 0} tokens</span>
               </div>
 
               <div className="flex items-center space-x-2 text-sm text-gray-600">
