@@ -5,7 +5,9 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
-import { Plus, Coins } from "lucide-react"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Skeleton } from "@/components/ui/skeleton"
+import { Plus, Coins, Search, Filter } from "lucide-react"
 import { supabase } from "@/lib/supabase"
 import { useAuth } from "@/contexts/auth-context"
 import { useToast } from "@/hooks/use-toast"
@@ -25,9 +27,13 @@ interface Grant {
 
 export function GrantsFeed() {
   const [grants, setGrants] = useState<Grant[]>([])
+  const [filteredGrants, setFilteredGrants] = useState<Grant[]>([])
   const [loading, setLoading] = useState(true)
   const [showCreateDialog, setShowCreateDialog] = useState(false)
   const [stakeAmounts, setStakeAmounts] = useState<{ [key: string]: number }>({})
+  const [stakingId, setStakingId] = useState<string | null>(null)
+  const [searchQuery, setSearchQuery] = useState("")
+  const [sortBy, setSortBy] = useState("stake_count")
   const { user, userProfile } = useAuth()
   const { toast } = useToast()
 
@@ -35,7 +41,12 @@ export function GrantsFeed() {
     fetchGrants()
   }, [])
 
+  useEffect(() => {
+    filterAndSortGrants()
+  }, [grants, searchQuery, sortBy])
+
   const fetchGrants = async () => {
+    setLoading(true)
     const { data, error } = await supabase
       .from("grants")
       .select(`
@@ -56,6 +67,36 @@ export function GrantsFeed() {
     setLoading(false)
   }
 
+  const filterAndSortGrants = () => {
+    let filtered = grants
+
+    // Search filter
+    if (searchQuery.trim()) {
+      filtered = filtered.filter(
+        (grant) =>
+          grant.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          grant.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          grant.users.name.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    }
+
+    // Sort
+    filtered.sort((a, b) => {
+      switch (sortBy) {
+        case "stake_count":
+          return b.stake_count - a.stake_count
+        case "amount_requested":
+          return b.amount_requested - a.amount_requested
+        case "created_at":
+          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        default:
+          return 0
+      }
+    })
+
+    setFilteredGrants(filtered)
+  }
+
   const handleStake = async (grantId: string) => {
     if (!user) return
 
@@ -69,6 +110,8 @@ export function GrantsFeed() {
       })
       return
     }
+
+    setStakingId(grantId)
 
     const { data, error } = await supabase.rpc("stake_tokens", {
       p_grant_id: grantId,
@@ -91,14 +134,59 @@ export function GrantsFeed() {
       // Reset the stake amount
       setStakeAmounts((prev) => ({ ...prev, [grantId]: 1 }))
     }
+    setStakingId(null)
   }
 
   const updateStakeAmount = (grantId: string, amount: number) => {
     setStakeAmounts((prev) => ({ ...prev, [grantId]: amount }))
   }
 
+  const GrantSkeleton = () => (
+    <Card className="hover:shadow-lg transition-shadow">
+      <CardHeader>
+        <div className="flex justify-between items-start">
+          <div className="space-y-2">
+            <Skeleton className="h-5 w-48" />
+            <Skeleton className="h-4 w-24" />
+          </div>
+          <Skeleton className="h-6 w-20" />
+        </div>
+      </CardHeader>
+      <CardContent>
+        <Skeleton className="h-16 w-full mb-4" />
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <Skeleton className="h-4 w-24" />
+            <Skeleton className="h-4 w-16" />
+          </div>
+          <div className="flex items-center space-x-2">
+            <Skeleton className="h-8 w-20" />
+            <Skeleton className="h-8 w-24" />
+          </div>
+          <Skeleton className="h-4 w-32" />
+        </div>
+      </CardContent>
+    </Card>
+  )
+
   if (loading) {
-    return <div className="text-center py-8">Loading grants...</div>
+    return (
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
+          <Skeleton className="h-8 w-48" />
+          <Skeleton className="h-10 w-32" />
+        </div>
+        <div className="flex gap-4 mb-6">
+          <Skeleton className="h-10 flex-1" />
+          <Skeleton className="h-10 w-40" />
+        </div>
+        <div className="grid gap-6 md:grid-cols-2">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <GrantSkeleton key={i} />
+          ))}
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -111,8 +199,38 @@ export function GrantsFeed() {
         </Button>
       </div>
 
+      {/* Search and Filter Controls */}
+      <div className="flex gap-4 items-center">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+          <Input
+            placeholder="Search grants, descriptions, or creators..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+        <Select value={sortBy} onValueChange={setSortBy}>
+          <SelectTrigger className="w-48">
+            <Filter className="h-4 w-4 mr-2" />
+            <SelectValue placeholder="Sort by" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="stake_count">Most Staked</SelectItem>
+            <SelectItem value="amount_requested">Highest Amount</SelectItem>
+            <SelectItem value="created_at">Most Recent</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Results Summary */}
+      <div className="text-sm text-gray-600">
+        Showing {filteredGrants.length} of {grants.length} grants
+        {searchQuery && ` for "${searchQuery}"`}
+      </div>
+
       <div className="grid gap-6 md:grid-cols-2">
-        {grants.map((grant) => (
+        {filteredGrants.map((grant) => (
           <Card key={grant.id} className="hover:shadow-lg transition-shadow">
             <CardHeader>
               <div className="flex justify-between items-start">
@@ -145,13 +263,25 @@ export function GrantsFeed() {
                     value={stakeAmounts[grant.id] || 1}
                     onChange={(e) => updateStakeAmount(grant.id, Number.parseInt(e.target.value) || 1)}
                     className="w-20"
+                    disabled={stakingId === grant.id}
                   />
                   <Button
                     size="sm"
                     onClick={() => handleStake(grant.id)}
-                    disabled={!userProfile?.token_balance || userProfile.token_balance < (stakeAmounts[grant.id] || 1)}
+                    disabled={
+                      !userProfile?.token_balance || 
+                      userProfile.token_balance < (stakeAmounts[grant.id] || 1) ||
+                      stakingId === grant.id
+                    }
                   >
-                    Stake Tokens
+                    {stakingId === grant.id ? (
+                      <>
+                        <Coins className="h-4 w-4 mr-1 animate-pulse" />
+                        Staking...
+                      </>
+                    ) : (
+                      "Stake Tokens"
+                    )}
                   </Button>
                 </div>
 
@@ -161,6 +291,17 @@ export function GrantsFeed() {
           </Card>
         ))}
       </div>
+
+      {filteredGrants.length === 0 && !loading && (
+        <div className="text-center py-12">
+          <div className="text-gray-500 mb-2">No grants found</div>
+          <div className="text-sm text-gray-400">
+            {searchQuery 
+              ? "Try adjusting your search terms" 
+              : "Be the first to request a grant!"}
+          </div>
+        </div>
+      )}
 
       <CreateGrantDialog open={showCreateDialog} onOpenChange={setShowCreateDialog} onSuccess={fetchGrants} />
     </div>
