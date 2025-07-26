@@ -1,3 +1,6 @@
+Hizikyas, [7/26/25 2:38 PM]
+grant free code 
+
 "use client"
 
 import { useState, useEffect } from "react"
@@ -19,6 +22,10 @@ interface Grant {
   description: string
   amount_requested: number
   stake_count: number
+  payment_method: string | null
+  phone_number: string | null
+  account_name: string | null
+  payment_status: string | null
   created_at: string
   users: {
     name: string
@@ -62,7 +69,7 @@ export function GrantsFeed() {
         variant: "destructive",
       })
     } else {
-      setGrants(data || [])
+      setGrants(data  [])
     }
     setLoading(false)
   }
@@ -74,8 +81,8 @@ export function GrantsFeed() {
     if (searchQuery.trim()) {
       filtered = filtered.filter(
         (grant) =>
-          grant.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          grant.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          grant.title.toLowerCase().includes(searchQuery.toLowerCase()) 
+          grant.description.toLowerCase().includes(searchQuery.toLowerCase()) 
           grant.users.name.toLowerCase().includes(searchQuery.toLowerCase())
       )
     }
@@ -100,9 +107,10 @@ export function GrantsFeed() {
   const handleStake = async (grantId: string) => {
     if (!user) return
 
-    const amount = stakeAmounts[grantId] || 1
+    const amount = stakeAmounts[grantId]  1
 
-    if (amount > (userProfile?.token_balance || 0)) {
+Hizikyas, [7/26/25 2:38 PM]
+if (amount > (userProfile?.token_balance  0)) {
       toast({
         title: "Error",
         description: "Insufficient tokens",
@@ -119,10 +127,10 @@ export function GrantsFeed() {
       p_amount: amount,
     })
 
-    if (error || !data.success) {
+    if (error  !data.success) {
       toast({
         title: "Error",
-        description: data?.error || "Failed to stake tokens",
+        description: data?.error  "Failed to stake tokens",
         variant: "destructive",
       })
     } else {
@@ -130,7 +138,11 @@ export function GrantsFeed() {
         title: "Success",
         description: `Staked ${amount} tokens successfully!`,
       })
-      fetchGrants()
+      // Refresh both grants and user profile to update token balance
+      await Promise.all([
+        fetchGrants(),
+        refreshProfile()
+      ])
       // Reset the stake amount
       setStakeAmounts((prev) => ({ ...prev, [grantId]: 1 }))
     }
@@ -192,7 +204,14 @@ export function GrantsFeed() {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold">Micro-Grant Requests</h2>
+        <div>
+          <h2 className="text-2xl font-bold">Micro-Grant Requests</h2>
+          {userProfile && (
+            <p className="text-gray-600 mt-1">
+              Your balance: <span className="font-semibold text-yellow-600">{userProfile.token_balance} tokens</span>
+            </p>
+          )}
+        </div>
         <Button onClick={() => setShowCreateDialog(true)}>
           <Plus className="h-4 w-4 mr-2" />
           Request Grant
@@ -218,7 +237,10 @@ export function GrantsFeed() {
           <SelectContent>
             <SelectItem value="stake_count">Most Staked</SelectItem>
             <SelectItem value="amount_requested">Highest Amount</SelectItem>
-            <SelectItem value="created_at">Most Recent</SelectItem>
+            <SelectItem value="created_at">Most Recent</
+
+Hizikyas, [7/26/25 2:38 PM]
+SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -238,9 +260,21 @@ export function GrantsFeed() {
                   <CardTitle className="text-lg">{grant.title}</CardTitle>
                   <CardDescription>by {grant.users.name}</CardDescription>
                 </div>
-                <Badge variant="outline" className="text-green-600">
-                  ${grant.amount_requested.toLocaleString()}
-                </Badge>
+                <div className="flex flex-col items-end space-y-1">
+                  <Badge variant="outline" className="text-green-600">
+                    ${grant.amount_requested.toLocaleString()}
+                  </Badge>
+                  {grant.payment_method && (
+                    <Badge variant="secondary" className="text-xs">
+                      {getPaymentMethodLabel(grant.payment_method)}
+                    </Badge>
+                  )}
+                  {grant.payment_status && (
+                    <Badge className={`text-xs ${getPaymentStatusColor(grant.payment_status)}`}>
+                      {getPaymentStatusLabel(grant.payment_status)}
+                    </Badge>
+                  )}
+                </div>
               </div>
             </CardHeader>
             <CardContent>
@@ -255,13 +289,25 @@ export function GrantsFeed() {
                   </div>
                 </div>
 
+                {grant.payment_method && (
+                  <div className="p-3 bg-blue-50 rounded-lg">
+                    <div className="flex items-center space-x-2 mb-1">
+                      <Smartphone className="h-3 w-3 text-blue-600" />
+                      <span className="text-xs font-medium text-blue-900">Payment Method</span>
+                    </div>
+                    <p className="text-xs text-blue-700">
+                      {getPaymentMethodLabel(grant.payment_method)} • {grant.phone_number}
+                    </p>
+                  </div>
+                )}
+
                 <div className="flex items-center space-x-2">
                   <Input
                     type="number"
                     min="1"
-                    max={userProfile?.token_balance || 0}
-                    value={stakeAmounts[grant.id] || 1}
-                    onChange={(e) => updateStakeAmount(grant.id, Number.parseInt(e.target.value) || 1)}
+                    max={userProfile?.token_balance  0}
+                    value={stakeAmounts[grant.id]  1}
+                    onChange={(e) => updateStakeAmount(grant.id, Number.parseInt(e.target.value)  1)}
                     className="w-20"
                     disabled={stakingId === grant.id}
                   />
@@ -269,8 +315,8 @@ export function GrantsFeed() {
                     size="sm"
                     onClick={() => handleStake(grant.id)}
                     disabled={
-                      !userProfile?.token_balance || 
-                      userProfile.token_balance < (stakeAmounts[grant.id] || 1) ||
+                      !userProfile?.token_balance  
+                      userProfile.token_balance < (stakeAmounts[grant.id]  1) 
                       stakingId === grant.id
                     }
                   >
@@ -284,6 +330,13 @@ export function GrantsFeed() {
                     )}
                   </Button>
                 </div>
+
+Hizikyas, [7/26/25 2:38 PM]
+{userProfile && userProfile.token_balance < (stakeAmounts[grant.id]  1) && (
+                  <p className="text-xs text-red-500">
+                    Insufficient tokens. You have {userProfile.token_balance} tokens available.
+                  </p>
+                )}
 
                 <span className="text-xs text-gray-500">Posted {new Date(grant.created_at).toLocaleDateString()}</span>
               </div>
