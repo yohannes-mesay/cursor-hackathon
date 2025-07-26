@@ -132,6 +132,8 @@ export type Database = {
           description: string
           amount_requested: number
           stake_count: number
+          total_funded: number
+          funding_percentage: number
           created_at: string
         }
         Insert: {
@@ -141,6 +143,8 @@ export type Database = {
           description: string
           amount_requested: number
           stake_count?: number
+          total_funded?: number
+          funding_percentage?: number
           created_at?: string
         }
         Update: {
@@ -150,6 +154,8 @@ export type Database = {
           description?: string
           amount_requested?: number
           stake_count?: number
+          total_funded?: number
+          funding_percentage?: number
           created_at?: string
         }
       }
@@ -173,6 +179,44 @@ export type Database = {
           grant_id?: string
           user_id?: string
           amount?: number
+          created_at?: string
+        }
+      }
+      payments: {
+        Row: {
+          id: string
+          grant_id: string
+          payer_id: string | null
+          amount: number
+          currency: string
+          payment_method: string | null
+          chapa_transaction_id: string | null
+          chapa_payment_status: string | null
+          payment_date: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          grant_id: string
+          payer_id?: string | null
+          amount: number
+          currency?: string
+          payment_method?: string | null
+          chapa_transaction_id?: string | null
+          chapa_payment_status?: string | null
+          payment_date?: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          grant_id?: string
+          payer_id?: string | null
+          amount?: number
+          currency?: string
+          payment_method?: string | null
+          chapa_transaction_id?: string | null
+          chapa_payment_status?: string | null
+          payment_date?: string
           created_at?: string
         }
       }
